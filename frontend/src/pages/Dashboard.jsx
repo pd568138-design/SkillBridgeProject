@@ -3,9 +3,7 @@ import Sidebar from "../components/Sidebar";
 
 function Dashboard() {
 
-  const [tasks, setTasks] = useState([]);
-  const [coins, setCoins] = useState(0);
-  const [activities, setActivities] = useState([]);
+  const [learners, setLearners] = useState([]);
 
   // USER
   const user = JSON.parse(
@@ -23,73 +21,55 @@ function Dashboard() {
     }
   })();
 
+  // COINS
+  const coins = Number(
+    localStorage.getItem("coins") || 0
+  );
+
   // LOAD DATA
   useEffect(() => {
 
-    const loadData = () => {
+    const loadData = async () => {
 
-      // TASKS
-      const allTasks =
-        JSON.parse(
-          localStorage.getItem("tasks")
-        ) || [];
+      try {
 
-      // ONLY CURRENT USER TASKS
-      const userTasks =
-        allTasks.filter(
-          (item)=>
-            item.userEmail === user?.email
+        const res = await fetch(
+          "http://localhost:5000/api/challenges"
         );
 
-      setTasks(userTasks);
+        if(!res.ok){
 
-      // COINS
-      const savedCoins =
-        Number(
-          localStorage.getItem("coins")
-        ) || 0;
+          setLearners([]);
+          return;
 
-      setCoins(savedCoins);
+        }
 
-      // ACTIVITY
-      const allActivity =
-        JSON.parse(
-          localStorage.getItem("recentActivity")
-        ) || [];
+        const data = await res.json();
 
-      const userActivity =
-        allActivity.filter(
-          (item)=>
-            item.userEmail === user?.email
-        );
+        setLearners(data || []);
 
-      setActivities(userActivity);
+      } catch(err){
+
+        console.log(err);
+
+        setLearners([]);
+
+      }
 
     };
 
     loadData();
 
-    // LIVE UPDATE
-    const interval = setInterval(() => {
-
-      loadData();
-
-    }, 500);
-
-    return () => clearInterval(interval);
-
   }, []);
 
   // STATS
   const completed =
-    tasks.filter(
-      (t)=>t.completed === true
+    learners.filter(
+      (l)=>l.status === "completed"
     ).length;
 
   const inProgress =
-    tasks.filter(
-      (t)=>t.completed === false
-    ).length;
+    learners.length - completed;
 
   return(
 
@@ -114,7 +94,7 @@ function Dashboard() {
 
           <h2 style={{color:"#1e3a8a"}}>
 
-            Hello {user?.name || "Student"} 👋
+            Hello {user?.name} 👋
 
           </h2>
 
@@ -138,9 +118,9 @@ function Dashboard() {
 
           <div className="mini-card">
 
-            <h3>Total Challenges</h3>
+            <h3>Total Learners</h3>
 
-            <p>{tasks.length}</p>
+            <p>{learners.length}</p>
 
           </div>
 
@@ -184,24 +164,22 @@ function Dashboard() {
 
         </div>
 
-        {/* RECENT ACTIVITY */}
+        {/* ACTIVITY */}
         <div className="dashboard-card-large">
 
           <h2>Recent Activity</h2>
 
           {
-            activities.length === 0 ? (
+            learners.length === 0 ? (
 
-              <p>
-                No activity yet
-              </p>
+              <p>No activity yet</p>
 
             ) : (
 
-              activities
+              learners
               .slice(-5)
               .reverse()
-              .map((item,i)=>(
+              .map((l,i)=>(
 
                 <div
                   key={i}
@@ -214,39 +192,23 @@ function Dashboard() {
                   }}
                 >
 
-                  <h3>
-                    {item.name}
-                  </h3>
+                  <b>{l.name}</b>
 
-                  <p>
+                  {" "}completed{" "}
 
-                    📚 Skill:
-                    {" "}
-                    {item.skill}
-
-                  </p>
+                  <b>{l.skill}</b>
 
                   <p>
 
                     🪙 Coins:
                     {" "}
-                    {item.coins}
+                    {l.coins || 0}
 
-                  </p>
+                    {" | "}
 
-                  <p>
-
-                    ✅ Status:
+                    Status:
                     {" "}
-                    {item.status}
-
-                  </p>
-
-                  <p>
-
-                    🕒
-                    {" "}
-                    {item.date}
+                    {l.status || "pending"}
 
                   </p>
 
